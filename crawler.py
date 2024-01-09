@@ -12,6 +12,7 @@ import re
 import gspread
 from gspread_dataframe import set_with_dataframe
 import schedule
+import mysql.connector
 
 def url_generator(driver):
     item_list = []
@@ -47,6 +48,7 @@ def url_generator(driver):
 
 
 def generate_data():
+
     url_list = [
         'https://www.shopclues.com/search?q=Mobiles&z=0&user_id=&user_segment=default&trend=1',
         'https://www.shopclues.com/search?q=Laptop&sc_z=&z=0&count=10&user_id=&user_segment=default',
@@ -58,6 +60,7 @@ def generate_data():
         'https://www.shopclues.com/search?q=Television&auto_suggest=1&seq=1&type=keyword&token=televisi&count=10&user_id=&user_segment=default&z=0',
         'https://www.shopclues.com/search?q=Shoes&z=0&user_id=&user_segment=default&trend=1'
     ]
+
     options = webdriver.ChromeOptions()
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -140,12 +143,63 @@ def write_df(**kwargs):
 
         set_with_dataframe(worksheet, df)
 
-        # Now, 'df' contains the data from the Google Sheet
+
         print("Data loaded successfully!! Have fun!!")
     else:
         print(f"Credentials file not found at {credentialsPath}")
 
+def feed_database():
+    item_data = generate_data()
+    item_data_tuples = [tuple(row) for row in item_data.to_numpy()]
+    mydb = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="$Freeman_007$",
+            auth_plugin = 'mysql_native_password'
+        )
+    mycursor = mydb.cursor(buffered = True)
+    mycursor.execute("CREATE DATABASE IF NOT EXISTS shopclues")
+    mycursor.execute("SHOW DATABASES")
+    mycursor.execute("USE shopclues")
+    mycursor.execute("""CREATE TABLE IF NOT EXISTS shop (
+                product_id VARCHAR(20),
+                type VARCHAR(20),
+                category VARCHAR(20),
+                name VARCHAR(255),
+                description VARCHAR(300),
+                price INT,
+                deal_price INT,
+                old_price INT,
+                discount FLOAT,  
+                star INT,
+                review_count INT,
+                place VARCHAR(20),
+                state VARCHAR(20)
+                )
+            """
+        )
+    mycursor.execute("SHOW TABLES")
+    ins = """
+            INSERT INTO shop (
+                product_id, type, category, name, description, price, deal_price,
+                old_price, discount, star, review_count, place, state
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
 
+    # Execute the INSERT statement for each item in item_list
+    mycursor.executemany(ins, item_data_tuples)
+    mydb.commit()
+    mycursor.execute("SELECT * FROM shop")
+    myresult = mycursor.fetchall()
+    for x in myresult:
+        print(x)
+    print("\n")
+    if len(myresult)>=1511:
+        mycursor.execute("DELETE FROM shop")
+        mydb.commit()
+        print("Data deleted to prevent overloading of SQL database")
+
+feed_database()
 schedule.every(15).seconds.do(write_df)
 while True:
     schedule.run_pending()
