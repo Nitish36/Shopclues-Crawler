@@ -18,13 +18,13 @@ def url_generator(driver):
     item_list = []
     ctr = 0
 
-    while ctr <= 100:
+    while ctr <= 10:
         items_links = driver.find_elements(By.CLASS_NAME, 'column.col3.search_blocks a')
 
         for item_link in items_links:
             item_list.append(item_link.get_attribute('href'))
             ctr += 1
-            if ctr == 100:  # Break when 50 items are collected
+            if ctr == 10:  # Break when 50 items are collected
                 break
 
         try:
@@ -85,7 +85,7 @@ def generate_data():
             pagesource = driver.page_source
             soup = BeautifulSoup(pagesource,'lxml')
             item_name = soup.find('h1',attrs={'itemprop':'name'}).text.strip()
-            description = soup.find('span',attrs={'itemprop':'description'}).text.strip()
+            #description = soup.find('span',attrs={'itemprop':'description'}).text.strip()
             pid = soup.find('span',attrs={'class':'pID'}).text.strip().replace('Product Id :','').strip()
             productid = re.search(r'\d+', pid).group()
             cat = soup.find('span',attrs={'class':'pID'}).text.strip().replace('Product Id :','').strip()
@@ -116,7 +116,7 @@ def generate_data():
                 'type':type_item,
                 'category':category,
                 'name':item_name,
-                'description':description,
+                #'description':description,
                 'price':int(price),
                 'deal_price':int(deal_price),
                 'old_price':int(old_price),
@@ -166,7 +166,6 @@ def feed_database():
                 type VARCHAR(20),
                 category VARCHAR(20),
                 name VARCHAR(255),
-                description VARCHAR(300),
                 price INT,
                 deal_price INT,
                 old_price INT,
@@ -180,11 +179,11 @@ def feed_database():
         )
     mycursor.execute("SHOW TABLES")
     ins = """
-            INSERT INTO shop (
-                product_id, type, category, name, description, price, deal_price,
-                old_price, discount, star, review_count, place, state
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
+                INSERT INTO shop (
+                    product_id, type, category, name, price, deal_price,
+                    old_price, discount, star, review_count, place, state
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
 
     # Execute the INSERT statement for each item in item_list
     mycursor.executemany(ins, item_data_tuples)
@@ -200,7 +199,9 @@ def feed_database():
         print("Data deleted to prevent overloading of SQL database")
 
 feed_database()
+"""
 schedule.every(15).seconds.do(write_df)
 while True:
     schedule.run_pending()
     time.sleep(3)
+"""
