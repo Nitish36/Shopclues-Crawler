@@ -133,7 +133,7 @@ def generate_data():
 def write_df(**kwargs):
     GSHEET_NAME = 'ShopcluesFeeder'
     TAB_NAME = 'Content'
-    credentialsPath = os.path.expanduser("credentials\\diamond-analysis-ac6758ca1ace.json")
+    credentialsPath = os.path.expanduser("credentials\\diamond-analysis-ac6758ca1ace.json")  # Create your own credentials through google sheet api
     df = generate_data()
     if os.path.isfile(credentialsPath):
         # Authenticate and open the Google Sheet
@@ -199,6 +199,8 @@ def feed_database():
         print("Data deleted to prevent overloading of SQL database")
 
 feed_database()
+
+#Uncomment this to feed data to google sheets
 """
 schedule.every(15).seconds.do(write_df)
 while True:
